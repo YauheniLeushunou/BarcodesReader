@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Reader with Camera Selection</title>
+    <style>
+        #barcode-video {
+            width: 320px; /* Set the desired width */
+            height: auto; /* Maintain aspect ratio */
+            border: 1px solid #ccc; /* Add border for visibility */
+        }
+        #detected-barcodes {
+            margin-top: 10px;
+        }
+        #product-info-form {
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Barcode Reader</h1>
+    <label for="cameraSelect">Select Camera:</label>
+    <select id="cameraSelect"></select>
+    <video id="barcode-video" autoplay></video>
+    <div id="detected-barcodes"></div>
+    <form id="product-info-form" style="display: none;">
+        <label for="productName">Product Name:</label>
+        <input type="text" id="productName" name="productName">
+        <label for="expirationDate">Expiration Date:</label>
+        <input type="date" id="expirationDate" name="expirationDate">
+        <button type="submit">Add</button>
+    </form>
+    <table id="product-table">
+        <thead>
+            <tr>
+                <th>Barcode</th>
+                <th>Product Name</th>
+                <th>Expiration Date</th>
+            </tr>
+        </thead>
+        <tbody id="product-table-body"></tbody>
+    </table>
+    <script src="https://cdn.jsdelivr.net/npm/quagga"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const cameraSelect = document.getElementById('cameraSelect');
+            const detectedBarcodesElement = document.getElementById("detected-barcodes");
+            const productInfoForm = document.getElementById("product-info-form");
+            const productNameInput = document.getElementById("productName");
+            const expirationDateInput = document.getElementById("expirationDate");
+            const productTableBody = document.getElementById("product-table-body");
+
+            // Populate camera selection dropdown
+            navigator.mediaDevices.enumerateDevices().then(function(devices) {
+                devices.forEach(function(device) {
+                    if (device.kind === 'videoinput') {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                    }
+                });
+            });
+
+            function startVideoStream(deviceId) {
+                navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: deviceId } }
+                })
+                .then(function(stream) {
+                    var video = document.getElementById('barcode-video');
+                    video.srcObject = stream;
+                    video.onloadedmetadata = function(e) {
+                        video.play();
+                    };
+                })
+                .catch(function(err) {
+                    console.error('Error accessing the camera:', err);
+                });
+            }
+
+            cameraSelect.addEventListener('change', function() {
+                if (cameraSelect.value) {
+                    startVideoStream(cameraSelect.value);
+                }
+            });
+
+            // Initialize QuaggaJS
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.getElementById('barcode-video')
+                },
+                decoder: {
+                    readers: ["ean_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    console.error('Error initializing Quagga:', err);
+                    return;
+                }
+                console.log('Initialization finished. Ready to start');
+                Quagga.start();
+            });
+
+            // Handle barcode detection
+            const detectedBarcodes = new Set();
+            Quagga.onDetected(function(result) {
+                const code = result.codeResult.code;
+                if (!detectedBarcodes.has(code)) {
+                    detectedBarcodes.add(code);
+                    const barcodeElement = document.createElement("div");
+                    barcodeElement.textContent = code;
+                    barcodeElement.addEventListener("click", function() {
+                        // Display selected barcode and show product info form
+                        productNameInput.value = '';
+                        expirationDateInput.value = '';
+                        detectedBarcodesElement.textContent = "Selected Barcode: " + code;
+                        productInfoForm.style.display = "block";
+                        productInfoForm.dataset.barcode = code; // Store selected barcode in form dataset
+                    });
+                    detectedBarcodesElement.appendChild(barcodeElement);
+                }
+            });
+
+            // Handle form submission
+            productInfoForm.addEventListener("submit", function(event) {
+                event.preventDefault();
+                const productName = productNameInput.value;
+                const expirationDate = expirationDateInput.value;
+                const barcode = productInfoForm.dataset.barcode; // Retrieve selected barcode from form dataset
+
+                // Save data to local storage
+                const productData = JSON.parse(localStorage.getItem('productData')) || [];
+                productData.push({ barcode, productName, expirationDate });
+                localStorage.setItem('productData', JSON.stringify(productData));
+
+                // Reset form and hide it
+                productNameInput.value = '';
+                expirationDateInput.value = '';
+                productInfoForm.style.display = "none";
+
+                // Add data to table
+                renderTable(productData);
+            });
+
+            // Load saved data from local storage on page load
+            function loadSavedData() {
+                const savedData = JSON.parse(localStorage.getItem('productData')) || [];
+                renderTable(savedData);
+            }
+
+            // Render table with saved data
+            function renderTable(data) {
+                productTableBody.innerHTML = '';
+                data.sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate));
+                data.forEach(item => {
+                    const row = productTableBody.insertRow();
+                    const cellBarcode = row.insertCell(0);
+                    const cellProductName = row.insertCell(1);
+                    const cellExpirationDate = row.insertCell(2);
+                    cellBarcode.textContent = item.barcode;
+                    cellProductName.textContent = item.productName;
+                    cellExpirationDate.textContent = item.expirationDate;
+                });
+            }
+
+            loadSavedData();
+        });
+    </script>
+</body>
+</html>
