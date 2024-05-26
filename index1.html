@@ -6,13 +6,18 @@
     <title>Barcode Reader with Camera Selection</title>
     <script src="https://cdn.jsdelivr.net/npm/quagga"></script>
     <style>
+        #new-product{
+            display: flex;
+            align-items: center;
+        }
         #barcode-video {
             width: 320px; /* Set the desired width */
             height: auto; /* Maintain aspect ratio */
             border: 1px solid #ccc; /* Add border for visibility */
         }
         #detected-barcodes {
-            margin-top: 10px;
+            font-size: larger;
+            margin: 10px;
         }
         #product-info-form {
             margin-top: 10px;
@@ -40,15 +45,19 @@
     <h1>Barcode Reader</h1>
     <label for="cameraSelect">Select Camera:</label>
     <select id="cameraSelect"></select><br>
-    <video id="barcode-video" autoplay></video>
-    <div id="detected-barcodes"></div>
-    <form id="product-info-form" style="display: none;">
-        <label for="productName">Product Name:</label>
-        <input type="text" id="productName" name="productName">
-        <label for="expirationDate">Expiration Date:</label>
-        <input type="date" id="expirationDate" name="expirationDate">
-        <button type="submit">Add</button>
-    </form>
+    <div id="new-product" >
+       
+        <video id="barcode-video" autoplay></video>
+        <div id="detected-barcodes"></div>
+        <form id="product-info-form" style="display: none; ">
+            <label for="productName">Product Name:</label>
+            <input type="text" id="productName" name="productName">
+            <label for="expirationDate">Expiration Date:</label>
+            <input type="date" id="expirationDate" name="expirationDate">
+            <button type="submit">Add</button>
+        </form>
+    </div>
+    
     <table id="product-table">
         <thead>
             <tr>
@@ -143,7 +152,7 @@
                         productNameInput.value = DATA.filter(el=>el.barcode===code).at(-1)?.productName || '';
                         expirationDateInput.value = '';
                         detectedBarcodesElement.textContent = "Selected Barcode: " + code;
-                        productInfoForm.style.display = "block";
+                        productInfoForm.style.display = "grid";
                         productInfoForm.dataset.barcode = code; // Store selected barcode in form dataset
                     });
                     detectedBarcodesElement.appendChild(barcodeElement);
