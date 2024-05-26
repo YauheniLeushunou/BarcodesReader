@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barcode Reader with Camera Selection</title>
+    <script src="https://cdn.jsdelivr.net/npm/quagga"></script>
     <style>
         #barcode-video {
             width: 320px; /* Set the desired width */
@@ -34,14 +35,14 @@
 <body>
     <h1>Barcode Reader</h1>
     <label for="cameraSelect">Select Camera:</label>
-    <select id="cameraSelect"></select>
+    <select id="cameraSelect"></select><br>
     <video id="barcode-video" autoplay></video>
     <div id="detected-barcodes"></div>
     <form id="product-info-form" style="display: none;">
         <label for="productName">Product Name:</label>
         <input type="text" id="productName" name="productName">
         <label for="expirationDate">Expiration Date:</label>
-        <input type="date" id="expirationDate" name="expirationDate">
+        <input type="date" id="expirationDate" name="expirationDate"><br>
         <button type="submit">Add</button>
     </form>
     <table id="product-table">
@@ -50,12 +51,14 @@
                 <th>Barcode</th>
                 <th>Product Name</th>
                 <th>Expiration Date</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody id="product-table-body"></tbody>
     </table>
-    <script src="https://cdn.jsdelivr.net/npm/quagga"></script>
+
     <script>
+        var DATA=[];
         document.addEventListener('DOMContentLoaded', function() {
             const cameraSelect = document.getElementById('cameraSelect');
             const detectedBarcodesElement = document.getElementById("detected-barcodes");
@@ -74,6 +77,11 @@
                         cameraSelect.appendChild(option);
                     }
                 });
+                // Automatically select the first camera
+                if (cameraSelect.options.length > 0) {
+                    cameraSelect.selectedIndex = 0;
+                    startVideoStream(cameraSelect.value);
+                }
             });
 
             function startVideoStream(deviceId) {
@@ -127,7 +135,8 @@
                     barcodeElement.textContent = code;
                     barcodeElement.addEventListener("click", function() {
                         // Display selected barcode and show product info form
-                        productNameInput.value = '';
+                        
+                        productNameInput.value = DATA.filter(el=>el.barcode===code).at(-1)?.productName || '';
                         expirationDateInput.value = '';
                         detectedBarcodesElement.textContent = "Selected Barcode: " + code;
                         productInfoForm.style.display = "block";
@@ -144,42 +153,92 @@
                 const expirationDate = expirationDateInput.value;
                 const barcode = productInfoForm.dataset.barcode; // Retrieve selected barcode from form dataset
 
+                if (!expirationDate) {
+                    alert("Please enter an expiration date.");
+                    return;
+                }
+
+
                 // Save data to local storage
-                const productData = JSON.parse(localStorage.getItem('productData')) || [];
-                productData.push({ barcode, productName, expirationDate });
-                localStorage.setItem('productData', JSON.stringify(productData));
+                const data = {
+                    id: generateId(), // Generate a unique ID for the new entry
+                    barcode: barcode,
+                    productName: productName,
+                    expirationDate: expirationDate
+                };
+
+                DATA.push(data);
+                localStorage.setItem('productData', JSON.stringify(DATA));
 
                 // Reset form and hide it
                 productNameInput.value = '';
                 expirationDateInput.value = '';
+                detectedBarcodesElement.value = '';
+                detectedBarcodesElement.textContent = '';
                 productInfoForm.style.display = "none";
 
-                // Add data to table
-                renderTable(productData);
+                loadTable();
+
+                detectedBarcodes.clear();
             });
 
+            const deleteProduct = function(id) {
+                DATA = DATA.filter(record => record.id !== id);
+                localStorage.setItem('productData', JSON.stringify(DATA));
+                loadTable();
+            };
+
+             // Single event listener for delete buttons
+             productTableBody.addEventListener('click', function(event) {
+                if (event.target.tagName === 'BUTTON' && event.target.textContent === 'Delete') {
+                    const id = event.target.dataset.id;
+                    const confirmed = confirm("Are you sure you want to delete this product?");
+                    if (confirmed) {
+                        deleteProduct(id);
+                    }
+                }
+            });
+
+
+            const loadTable = function() {
+ 
+                    productTableBody.innerHTML = '';
+                    DATA.sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate));
+                    DATA.forEach(data => {
+                        const row = productTableBody.insertRow();
+                        const cellBarcode = row.insertCell(0);
+                        const cellProductName = row.insertCell(1);
+                        const cellExpirationDate = row.insertCell(2);
+                        const cellAction = row.insertCell(3);
+                        cellBarcode.textContent = data.barcode;
+                        cellProductName.textContent = data.productName;
+                        cellExpirationDate.textContent = data.expirationDate;
+
+                        // Add delete button
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.dataset.id = data.id;
+                        cellAction.appendChild(deleteButton);
+                    });
+                
+            };
+
+
+              // Generate unique ID
+              const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
+
+         
+
             // Load saved data from local storage on page load
-            function loadSavedData() {
-                const savedData = JSON.parse(localStorage.getItem('productData')) || [];
-                renderTable(savedData);
-            }
+            window.onload = function() {
 
-            // Render table with saved data
-            function renderTable(data) {
-                productTableBody.innerHTML = '';
-                data.sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate));
-                data.forEach(item => {
-                    const row = productTableBody.insertRow();
-                    const cellBarcode = row.insertCell(0);
-                    const cellProductName = row.insertCell(1);
-                    const cellExpirationDate = row.insertCell(2);
-                    cellBarcode.textContent = item.barcode;
-                    cellProductName.textContent = item.productName;
-                    cellExpirationDate.textContent = item.expirationDate;
-                });
-            }
-
-            loadSavedData();
+                const savedData = localStorage.getItem('productData');
+                if (savedData) {
+                    DATA = JSON.parse(savedData);
+                }    
+                productInfoForm.style.display = "none";
+                loadTable();
+            };
         });
     </script>
 </body>
