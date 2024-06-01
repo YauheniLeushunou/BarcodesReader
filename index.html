@@ -1,172 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barcode Reader</title>
-    <style>
-        /* Add your CSS styles here */
-        #barcode-video {
-            width: 320px; /* Set the desired width */
-            height: auto; /* Maintain aspect ratio */
-            border: 1px solid #ccc; /* Add border for visibility */
-        }
-        #detected-barcodes {
-            margin-top: 10px;
-        }
-        #product-info-form {
-            margin-top: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
-</head>
-<body>
-    <h1>Barcode Reader</h1>
-    <video id="barcode-video" autoplay></video>
-    <div id="detected-barcodes"></div>
-    <form id="product-info-form">
-        <label for="productName">Product Name:</label>
-        <input type="text" id="productName" name="productName">
-        <label for="expirationDate">Expiration Date:</label>
-        <input type="date" id="expirationDate" name="expirationDate">
-        <button type="submit">Add</button>
-    </form>
-    <table id="product-table">
-        <thead>
-            <tr>
-                <th>Barcode</th>
-                <th>Product Name</th>
-                <th>Expiration Date</th>
-            </tr>
-        </thead>
-        <tbody id="product-table-body"></tbody>
-    </table>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/quagga"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const detectedBarcodesElement = document.getElementById("detected-barcodes");
-            const productInfoForm = document.getElementById("product-info-form");
-            const productNameInput = document.getElementById("productName");
-            const expirationDateInput = document.getElementById("expirationDate");
-            const productTableBody = document.getElementById("product-table-body");
+    <script src="./js/main.js"></script>
+</head>
 
-            // Access user's camera
-            navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                var video = document.getElementById('barcode-video');
-                video.srcObject = stream;
-                video.onloadedmetadata = function(e) {
-                    video.play();
-                };
-            })
-            .catch(function(err) {
-                console.error('Error accessing the camera:', err);
-            });
 
-            const loadTable = function() {
-                const savedData = localStorage.getItem('productData');
-                if (savedData) {
-                    const records = JSON.parse(savedData);
-                    productTableBody.innerHTML= null;
-                    records.forEach(data=>{
-                          // Add data to table
-                        const row = productTableBody.insertRow();
-                        const cellBarcode = row.insertCell(0);
-                        const cellProductName = row.insertCell(1);
-                        const cellExpirationDate = row.insertCell(2);
-                        cellBarcode.textContent = data.barcode;
-                        cellProductName.textContent = data.productName;
-                        cellExpirationDate.textContent = data.expirationDate;
-                    })
-                }
-            }
-            // Load saved data from local storage on page load
-            window.onload = function() {
-                productInfoForm.style.display = "none";
-                loadTable();
-            };
+<body>
+    <div class="container">
+        <h1 class="my-4">Barcode Reader</h1>
+        <div class="form-group">
+            <label for="cameraSelect">Select Camera:</label>
+            <select id="cameraSelect" class="form-control"></select>
+        </div>
 
-            // Initialize QuaggaJS
-            Quagga.init({
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: document.getElementById('barcode-video')
-                },
-                decoder: {
-                    readers: ["ean_reader"]
-                }
-            }, function(err) {
-                if (err) {
-                    console.error('Error initializing Quagga:', err);
-                    return;
-                }
-                console.log('Initialization finished. Ready to start');
-                Quagga.start();
-            });
+        <div class="text-center my-4">
+            <video id="barcode-video" autoplay class="img-fluid"></video>
+        </div>
+        <div id="detected-barcodes" class="my-3"></div>
 
-            // Handle barcode detection
-            const detectedBarcodes = new Set();
-            Quagga.onDetected(function(result) {
-                const code = result.codeResult.code;
-                if (!detectedBarcodes.has(code)) {
-                    detectedBarcodes.add(code);
-                    const barcodeElement = document.createElement("div");
-                    barcodeElement.textContent = code;
-                    barcodeElement.addEventListener("click", function() {
-                        // Display selected barcode and show product info form
-                        productNameInput.value = '';
-                        expirationDateInput.value = '';
-                        detectedBarcodesElement.textContent = "Selected Barcode: " + code;
-                        productInfoForm.style.display = "block";
-                        productInfoForm.dataset.barcode = code; // Store selected barcode in form dataset
-                    });
-                    detectedBarcodesElement.appendChild(barcodeElement);
-                }
-            });
+        <form id="product-info-form" class="form-inline" style="display: none;">
+            <div class="form-group mb-2">
+                <label for="productName" class="sr-only">Product Name:</label>
+                <input type="text" id="productName" name="productName" class="form-control" placeholder="Product Name">
+            </div>
+            <div class="form-group mx-sm-3 mb-2">
+                <label for="expirationDate" class="sr-only">Expiration Date:</label>
+                <input type="date" id="expirationDate" name="expirationDate" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-primary mb-2">Add</button>
+        </form>
 
-            // Handle form submission
-            productInfoForm.addEventListener("submit", function(event) {
-                event.preventDefault();
-                const productName = productNameInput.value;
-                const expirationDate = expirationDateInput.value;
-                const barcode = productInfoForm.dataset.barcode; // Retrieve selected barcode from form dataset
+        <table id="product-table" class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>Barcode</th>
+                    <th>Product Name</th>
+                    <th>Expiration Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="product-table-body"></tbody>
+        </table>
+    </div>
 
-                // Save data to local storage
-                const data = {
-                    barcode: barcode,
-                    productName: productName,
-                    expirationDate: expirationDate
-                };
-
-                const savedData = localStorage.getItem('productData') || "[]";
-                const records = JSON.parse(savedData);
-                records.push(data)
-                localStorage.setItem('productData', JSON.stringify(records));
-
-                // Reset form and hide it
-                productNameInput.value = '';
-                expirationDateInput.value = '';
-                detectedBarcodesElement.value='';
-                productInfoForm.style.display = "none";
-
-                loadTable();
-
-                detectedBarcodes.clear();
-            });
-        });
-    </script>
 </body>
+
 </html>
