@@ -1,27 +1,7 @@
-var PRODUCTS = [];
+var PRODUCTS;
 
 // Generate unique ID
 const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
-
-/**
- * Activates camera by id
- */
-function startVideoStream(deviceId) {
-  navigator.mediaDevices
-    .getUserMedia({
-      video: { deviceId: { exact: deviceId } }
-    })
-    .then(function (stream) {
-      var video = document.getElementById('barcode-video');
-      video.srcObject = stream;
-      video.onloadedmetadata = function (e) {
-        video.play();
-      };
-    })
-    .catch(function (err) {
-      console.error('Error accessing the camera:', err);
-    });
-}
 
 document.addEventListener('DOMContentLoaded', function () {
   const cameraSelect = document.getElementById('cameraSelect');
@@ -35,12 +15,35 @@ document.addEventListener('DOMContentLoaded', function () {
    * Load saved data from local storage on page load
    */
   window.onload = function () {
-    const savedData = localStorage.getItem('productData');
-    if (savedData) {
-      PRODUCTS = JSON.parse(savedData);
-    }
     showEditForm(false);
-    loadTable();
+    loadTable(null);
+  };
+
+  // Upload data from file
+  window.uploadData = function (event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const contents = e.target.result;
+        DATA = JSON.parse(contents);
+        loadTable(mergeListsById(PRODUCTS, DATA));
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  // Save data to file
+  window.saveData = function () {
+    const dataStr = JSON.stringify(PRODUCTS, null, 2);
+    const dataUri =
+      'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const exportFileDefaultName = `productData(${new Date().toUTCString()}).json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   // Populate camera selection dropdown
@@ -90,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function () {
       Quagga.start();
     }
   );
-
   // Handle barcode detection
   const detectedBarcodes = new Set();
   Quagga.onDetected(function (result) {
@@ -135,14 +137,12 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     PRODUCTS.push(data);
-    localStorage.setItem('productData', JSON.stringify(PRODUCTS));
 
     // Reset form and hide it
     detectedBarcodesElement.value = '';
     detectedBarcodesElement.textContent = '';
     showEditForm(false);
-
-    loadTable();
+    loadTable(PRODUCTS);
 
     detectedBarcodes.clear();
   });
@@ -161,17 +161,23 @@ document.addEventListener('DOMContentLoaded', function () {
         'Are you sure you want to delete this product?'
       );
       if (confirmed) {
-        PRODUCTS = PRODUCTS.filter((record) => record.id !== id);
-        localStorage.setItem('productData', JSON.stringify(PRODUCTS));
-        loadTable();
+        loadTable(PRODUCTS.filter((record) => record.id !== id));
       }
     }
   });
 
   /**
-   * Reloads data table based on provided data
+   * Reloads data table
    */
-  const loadTable = function () {
+  const loadTable = function (updatedDate) {
+    if (updatedDate) {
+      localStorage.setItem('productData', JSON.stringify(updatedDate));
+    }
+
+    const savedData = localStorage.getItem('productData');
+    PRODUCTS = savedData ? JSON.parse(savedData) : [];
+    
+
     productTableBody.innerHTML = '';
     PRODUCTS.sort(
       (a, b) => new Date(a.expirationDate) - new Date(b.expirationDate)
@@ -195,8 +201,52 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   };
 
+  /**
+   * Enable/disable input form for product
+   */
   const showEditForm = function (show) {
     expirationDateInput.value = '';
     productInfoForm.style.display = show ? 'flex' : 'none';
   };
+
+  /**
+   * Activates camera by id
+   */
+  function startVideoStream(deviceId) {
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { deviceId: { exact: deviceId } }
+      })
+      .then(function (stream) {
+        var video = document.getElementById('barcode-video');
+        video.srcObject = stream;
+        video.onloadedmetadata = function (e) {
+          video.play();
+        };
+      })
+      .catch(function (err) {
+        console.error('Error accessing the camera:', err);
+      });
+  }
+
+  function mergeListsById(list1, list2) {
+    // Create a map from list1 using the ID as the key
+    const map = new Map();
+    list1.forEach((item) => map.set(item.id, { ...item }));
+
+    // Merge objects from list2 into the map
+    list2.forEach((item) => {
+      if (map.has(item.id)) {
+        // If the ID exists in list1, merge the objects
+        map.set(item.id, { ...map.get(item.id), ...item });
+        console.log('updated: ', item);
+      } else {
+        // If the ID does not exist in list1, add the item to the map
+        map.set(item.id, { ...item });
+        console.log('added: ', item);
+      }
+    });
+    // Convert the map back to an array
+    return Array.from(map.values());
+  }
 });

@@ -1,37 +1,37 @@
 # Barcode Reader with Camera Selection
 
-This project is a web-based application that enables users to scan barcodes using their device's camera, manage the scanned product information, and store the data locally. It utilizes the QuaggaJS library for barcode scanning and JavaScript for handling the camera input and data management.
+This project is a web-based barcode reader application that allows users to select a camera, scan barcodes, and manage product information. It also includes functionalities to upload data from a file and save data to a file.
 
 ## Features
 
-- Camera Selection: Allows users to choose from available cameras on their device.
-- Live Barcode Scanning: Scans barcodes in real-time using the selected camera.
-- Product Information Form: Enables users to enter product details such as name and expiration date for each scanned barcode.
-- Data Storage: Saves product information in the browser's local storage.
-- Dynamic Table: Displays the list of scanned products with options to delete entries.
+- Select and use different cameras for barcode scanning
+- Scan and detect barcodes using the QuaggaJS library
+- Display detected barcodes and input associated product information
+- Save product information to local storage
+- Upload product data from a JSON file
+- Save current product data to a JSON file
 
-## Usage
+## Technologies Used
 
-### Camera Selection
+- HTML
+- CSS (Bootstrap 4.5.2)
+- JavaScript
+- QuaggaJS (for barcode scanning)
 
-- Select the desired camera from the dropdown menu.
-- The video feed from the selected camera will be displayed.
+## How to Use
 
-### Scanning Barcodes
+1. **Select Camera:**
+   - Use the dropdown to select the desired camera for barcode scanning.
+2. **Scan Barcode:**
+   - The selected camera will start streaming, and barcodes will be detected and displayed.
+3. **Add Product Information:**
+   - Click on a detected barcode to input the associated product name and expiration date.
+   - Click 'Add' to save the product information.
+4. **Upload Data:**
+   - Click on 'Upload Data' in the header menu to upload product data from a JSON file.
+5. **Save Data:**
+   - Click on 'Save to File' in the header menu to download the current product data as a JSON file.
 
-- Point the camera at a barcode.
-- Detected barcodes will be listed below the video feed.
-
-## Adding Product Information
-
-- Click on a detected barcode to open the product information form.
-- Enter the product name and expiration date.
-- Click the "Add" button to save the product information.
-
-## Managing Product Data
-
-- Table: Displays all scanned products with their details.
-- Delete: Remove a product entry by clicking the "Delete" button next to it.
 
 ## Local Development
 
@@ -51,12 +51,6 @@ cd barcode-reader
 
 - Open index.html in a web browser.
 
-## Technologies Used
-
-- HTML: For the structure of the application.
-- CSS: For styling the application.
-- JavaScript: For functionality and interactivity.
-- QuaggaJS: For barcode scanning.
 
 ## Code Overview
 
